@@ -2,6 +2,8 @@ import os
 import time
 import feedparser
 import requests
+import smtplib
+from email.mime.text import MIMEText
 from google import genai
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
@@ -13,6 +15,9 @@ load_dotenv()
 # Configuration
 MEMBERSHIP_ID = os.getenv("SUPERCAST_MEMBERSHIP_ID")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GMAIL_SENDER = os.getenv("GMAIL_SENDER")
+GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
+GMAIL_RECIPIENT = os.getenv("GMAIL_RECIPIENT")
 
 if not MEMBERSHIP_ID:
     raise ValueError("SUPERCAST_MEMBERSHIP_ID not found. Please ensure it is set in your .env file.")
@@ -120,6 +125,28 @@ def process_audio_with_gemini(audio_file_paths):
         
     return response.text
 
+def email_summary(content, date_str):
+    print("Emailing summary to your inbox...")
+    if not all([GMAIL_SENDER, GMAIL_APP_PASSWORD, GMAIL_RECIPIENT]):
+        print("Skipping email: Gmail credentials not fully configured in .env")
+        return
+
+    subject = f"WTF Premium Podcast Insights - {date_str}"
+    
+    msg = MIMEText(content)
+    msg['Subject'] = subject
+    msg['From'] = GMAIL_SENDER
+    msg['To'] = GMAIL_RECIPIENT
+
+    try:
+        # Connect to Gmail's SMTP server
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_SENDER, GMAIL_APP_PASSWORD)
+            server.send_message(msg)
+        print("Email sent successfully!")
+    except Exception as e:
+        print(f"Failed to send email: {e}")
+
 def main():
     files = get_last_weeks_premium_audio()
     if not files:
@@ -130,6 +157,9 @@ def main():
         # Pass files to Gemini for processing
         gemini_output = process_audio_with_gemini(files)
         
+        # We define date_str here so we can use it for both the filename and the email subject
+        date_str = datetime.now().strftime('%Y%m%d')
+        
         # Update this path to match your actual Google Drive folder structure
         drive_path = os.path.expanduser("~/My Drive/Podcast/")
         
@@ -138,12 +168,15 @@ def main():
             os.makedirs(drive_path)
 
         # Save the final output    
-        output_filename = os.path.join(drive_path, f"WTF_prep_notes_{datetime.now().strftime('%Y%m%d')}.md")
+        output_filename = os.path.join(drive_path, f"WTF_prep_notes_{date_str}.md")
         
         with open(output_filename, "w", encoding="utf-8") as f:
             f.write(gemini_output)
             
         print(f"\nDone! Your podcast prep notes are saved to {output_filename}")
+        
+        # New Step: Email the results!
+        email_summary(gemini_output, date_str)
 
 if __name__ == "__main__":
     main()
