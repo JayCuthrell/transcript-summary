@@ -2,7 +2,7 @@ import os
 import time
 import feedparser
 import requests
-import google.generativeai as genai
+from google import genai
 from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from dotenv import load_dotenv
@@ -19,8 +19,8 @@ if not MEMBERSHIP_ID:
 if not GEMINI_API_KEY:
     raise ValueError("GEMINI_API_KEY not found. Please ensure it is set in your .env file.")
 
-# Configure the Gemini API
-genai.configure(api_key=GEMINI_API_KEY)
+# Configure the Gemini API client using the new SDK syntax
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # Construct your private Supercast feed URL
 RSS_FEED_URL = f"https://feeds.supercast.com/feeds/{MEMBERSHIP_ID}"
@@ -74,30 +74,29 @@ def get_last_weeks_premium_audio():
     return downloaded_files
 
 def process_audio_with_gemini(audio_file_paths):
-    print("\nStarting Gemini AI Studio Processing...")
+    print("\nStarting Gemini Processing...")
     
     uploaded_files = []
     
-    # 1. Upload the files to the Gemini File API
+    # 1. Upload the files using the new Client syntax
     for file_path in audio_file_paths:
         print(f"Uploading {file_path} to Gemini...")
-        gemini_file = genai.upload_file(path=file_path)
+        gemini_file = client.files.upload(file=file_path)
         uploaded_files.append(gemini_file)
         
     # 2. Wait for files to process
     print("Waiting for audio processing to complete on Google's end...")
     for uploaded_file in uploaded_files:
-        while uploaded_file.state.name == "PROCESSING":
+        # Refresh the file status
+        uploaded_file = client.files.get(name=uploaded_file.name)
+        # Safely check the state string to accommodate enum formats
+        while "PROCESSING" in str(uploaded_file.state):
             print(".", end="", flush=True)
             time.sleep(2)
-            # Refresh the file status
-            uploaded_file = genai.get_file(uploaded_file.name)
-        print() # New line
+            uploaded_file = client.files.get(name=uploaded_file.name)
+        print() 
             
-    # 3. Initialize the model 
-    model = genai.GenerativeModel('models/gemini-1.5-pro')
-    
-    # 4. Craft your prompt
+    # 3. Craft your prompt
     prompt = """
     Attached are 5 daily tech news podcast episodes from the past week. 
     Please do the following:
@@ -105,15 +104,19 @@ def process_audio_with_gemini(audio_file_paths):
     2. Identify the top 3 overarching tech trends or themes from this week that I should discuss on my own podcast, 'What The Fudge'.
     """
     
-    # 5. Call the model with the prompt AND the audio files
-    print("Generating insights with Gemini 1.5 Pro (this may take a minute or two)...")
+    # 4. Call the model with the prompt AND the audio files
+    # We are upgrading you to the current gemini-2.5-flash model
+    print("Generating insights with Gemini 2.5 Flash (this may take a minute or two)...")
     content_request = [prompt] + uploaded_files
-    response = model.generate_content(content_request)
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=content_request
+    )
     
-    # 6. Cleanup: Delete the files from Google's servers
+    # 5. Cleanup: Delete the files from Google's servers
     print("Cleaning up uploaded files...")
     for uploaded_file in uploaded_files:
-        genai.delete_file(uploaded_file.name)
+        client.files.delete(name=uploaded_file.name)
         
     return response.text
 
@@ -127,8 +130,16 @@ def main():
         # Pass files to Gemini for processing
         gemini_output = process_audio_with_gemini(files)
         
-        # Save the final output
-        output_filename = f"WTF_prep_notes_{datetime.now().strftime('%Y%m%d')}.md"
+        # Update this path to match your actual Google Drive folder structure
+        drive_path = os.path.expanduser("~/My Drive/Podcast/")
+        
+        # Ensure the directory exists
+        if not os.path.exists(drive_path):
+            os.makedirs(drive_path)
+
+        # Save the final output    
+        output_filename = os.path.join(drive_path, f"WTF_prep_notes_{datetime.now().strftime('%Y%m%d')}.md")
+        
         with open(output_filename, "w", encoding="utf-8") as f:
             f.write(gemini_output)
             
