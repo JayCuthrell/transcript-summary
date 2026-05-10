@@ -4,9 +4,9 @@ setuptools
 requests
 python-dateutil
 datetime
-python-dotenv
-urllib3
+urllib3<2
 icalendar
 pytz
 feedparser
 youtube-transcript-api
+google-generativeai
