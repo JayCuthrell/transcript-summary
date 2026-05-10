@@ -1,0 +1,11 @@
+bs4
+setuptools
+requests
+python-dateutil
+datetime
+python-dotenv
+urllib3
+icalendar
+pytz
+feedparser
+youtube-transcript-api
