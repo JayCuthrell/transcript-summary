@@ -15,7 +15,8 @@ This repo downloads recent premium podcast episodes from a private Supercast RSS
 - `pull-transcripts.py`: main script that downloads audio and calls Gemini.
 - `setup.sh`: convenience script to create/activate a venv and install `requirements.txt`.
 - `requirements.txt`: runtime dependencies.
- - `process_techmeme.py`: downloads Techmeme's River page, extracts permalink clusters, writes a Markdown digest to `~/My Drive/Podcast/`, and can email the digest if Gmail creds are provided in `.env`.
+- `process_techmeme.py`: downloads Techmeme's River page, extracts permalink clusters, writes a Markdown digest to `~/My Drive/Podcast/`, and can email the digest if Gmail creds are provided in `.env`.
+- `run_sunday_workflow.sh`: example zsh workflow that activates `my_env`, runs `pull-transcripts.py` then `process_techmeme.py`, and appends logs to `sunday_workflow.log` in the repo root.
 
 **Quickstart (automated)**
 If you want the simple, one-line approach you already have:
@@ -76,5 +77,5 @@ What to expect from `process_techmeme.py`:
 PRs welcome — please open issues for feature requests and include a short description and reproduction steps.
 
 **License**
-This project has no license file; add one if you intend to publish or share broadly.
+This repository now includes a license file: [LICENSE](LICENSE). The license grants broad permission to use the code but includes an explicit "AS IS" / no-warranty disclaimer and a note that the software is not intended for production use.
 
