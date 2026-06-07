@@ -15,6 +15,7 @@ This repo downloads recent premium podcast episodes from a private Supercast RSS
 - `pull-transcripts.py`: main script that downloads audio and calls Gemini.
 - `setup.sh`: convenience script to create/activate a venv and install `requirements.txt`.
 - `requirements.txt`: runtime dependencies.
+ - `process_techmeme.py`: downloads Techmeme's River page, extracts permalink clusters, writes a Markdown digest to `~/My Drive/Podcast/`, and can email the digest if Gmail creds are provided in `.env`.
 
 **Quickstart (automated)**
 If you want the simple, one-line approach you already have:
@@ -47,16 +48,19 @@ GMAIL_RECIPIENT=me@example.com
 
 `pull-transcripts.py` checks for these variables and will raise a clear error if required keys are missing.
 
-**Run the main script**
+**Run the main scripts**
 
 ```bash
+# Transcribe and summarize podcast episodes via Gemini
 python3 pull-transcripts.py
+
+# Fetch Techmeme River permalinks and write a digest (optionally emails it)
+python3 process_techmeme.py
 ```
 
-What to expect:
-- Downloads recent episodes to `podcast_audio/`.
-- Uploads audio to Gemini, waits for processing, then generates a Markdown prep file named like `WTF_prep_notes_YYYYMMDD.md` in `~/My Drive/Podcast/` (create that folder or change `drive_path` in the script).
-- If Gmail credentials are configured, the script will attempt to email the summary.
+What to expect from `process_techmeme.py`:
+- Downloads Techmeme River, extracts headline permalink clusters, and writes a Markdown file named like `Techmeme_River_Permalinks_YYYYMMDD.md` to `~/My Drive/Podcast/`.
+- If Gmail credentials are configured in `.env`, the script will attempt to email the digest to `GMAIL_RECIPIENT`.
 
 **Recommendations & next steps**
 - Pin dependency versions for reproducibility (create a `requirements-lock.txt` or use `pip-compile`).
